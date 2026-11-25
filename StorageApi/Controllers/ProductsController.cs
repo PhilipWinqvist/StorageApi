@@ -1,6 +1,7 @@
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using StorageApi.Models;
+using StorageApi.DTOs;
 
 [Route("api/[controller]")]
 [ApiController]
@@ -12,16 +13,24 @@ public class ProductsController : ControllerBase
         _context = context;
     }
 
-    // GET: api/Product
+    // GET: api/Products
     [HttpGet]
-    public async Task<ActionResult<IEnumerable<Product>>> GetProduct()
+    public async Task<ActionResult<IEnumerable<ProductDto>>> GetProduct()
     {
-        return await _context.Product.ToListAsync();
+        return await _context.Product
+            .Select(p => new ProductDto
+            {
+                Id = p.Id,
+                Name = p.Name,
+                Price = p.Price,
+                Count = p.Count
+            })
+            .ToListAsync();
     }
 
-    // GET: api/Product/5
+    // GET: api/Products/5
     [HttpGet("{id}")]
-    public async Task<ActionResult<Product>> GetProduct(int id)
+    public async Task<ActionResult<ProductDto>> GetProduct(int id)
     {
         var product = await _context.Product.FindAsync(id);
 
@@ -30,11 +39,16 @@ public class ProductsController : ControllerBase
             return NotFound();
         }
 
-        return product;
+        return new ProductDto
+        {
+            Id = product.Id,
+            Name = product.Name,
+            Price = product.Price,
+            Count = product.Count
+        };
     }
 
-    // PUT: api/Product/5
-    // To protect from overposting attacks, see https://go.microsoft.com/fwlink/?linkid=2123754
+    // PUT: api/Products/5
     [HttpPut("{id}")]
     public async Task<IActionResult> PutProduct(int? id, Product product)
     {
@@ -64,18 +78,35 @@ public class ProductsController : ControllerBase
         return NoContent();
     }
 
-    // POST: api/Product
-    // To protect from overposting attacks, see https://go.microsoft.com/fwlink/?linkid=2123754
+    // POST: api/Products
     [HttpPost]
-    public async Task<ActionResult<Product>> PostProduct(Product product)
+    public async Task<ActionResult<ProductDto>> PostProduct(CreateProductDto dto)
     {
+        var product = new Product
+        {
+            Name = dto.Name,
+            Price = dto.Price,
+            Category = dto.Category,
+            Shelf = dto.Shelf,
+            Count = dto.Count,
+            Description = dto.Description
+        };
+
         _context.Product.Add(product);
         await _context.SaveChangesAsync();
 
-        return CreatedAtAction("GetProduct", new { id = product.Id }, product);
+        var result = new ProductDto
+        {
+            Id = product.Id,
+            Name = product.Name,
+            Price = product.Price,
+            Count = product.Count
+        };
+
+        return CreatedAtAction("GetProduct", new { id = product.Id }, result);
     }
 
-    // DELETE: api/Product/5
+    // DELETE: api/Products/5
     [HttpDelete("{id}")]
     public async Task<IActionResult> DeleteProduct(int? id)
     {
