@@ -14,10 +14,25 @@ public class ProductsController : ControllerBase
     }
 
     // GET: api/Products
+    // GET: api/Products?category=Leksaker
+    // GET: api/Products?name=bad
+    // GET: api/Products?category=Leksaker&name=bad
     [HttpGet]
-    public async Task<ActionResult<IEnumerable<ProductDto>>> GetProduct()
+    public async Task<ActionResult<IEnumerable<ProductDto>>> GetProduct(string? category, string? name)
     {
-        return await _context.Product
+        var query = _context.Product.AsQueryable();
+
+        if (!string.IsNullOrWhiteSpace(category))
+        {
+            query = query.Where(p => p.Category == category);
+        }
+
+        if (!string.IsNullOrWhiteSpace(name))
+        {
+            query = query.Where(p => p.Name.Contains(name));
+        }
+
+        return await query
             .Select(p => new ProductDto
             {
                 Id = p.Id,
@@ -26,6 +41,28 @@ public class ProductsController : ControllerBase
                 Count = p.Count
             })
             .ToListAsync();
+    }
+
+    // GET: api/Products/stats
+    [HttpGet("stats")]
+    public async Task<ActionResult<StatsDto>> GetStats()
+    {
+        var totalProducts = await _context.Product.CountAsync();
+
+        if (totalProducts == 0)
+        {
+            return new StatsDto();
+        }
+
+        var totalValue = await _context.Product.SumAsync(p => (long)p.Price * p.Count);
+        var averagePrice = await _context.Product.AverageAsync(p => (double)p.Price);
+
+        return new StatsDto
+        {
+            TotalProducts = totalProducts,
+            TotalInventoryValue = totalValue,
+            AveragePrice = Math.Round(averagePrice, 2)
+        };
     }
 
     // GET: api/Products/5
